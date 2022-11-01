@@ -1,14 +1,25 @@
 import { NextFunction, Request, Response } from 'express';
 import { Error } from 'mongoose';
 import { ClientError } from '../exceptions/clientError';
+import { ForbiddenError } from '../exceptions/forbiddenError';
 import { NotFoundError } from '../exceptions/notFoundError';
+import { CustomRequest } from '../middleware/checkJwt';
 import { User, IUser } from '../models/user';
+import { ROLES } from '../utils/constants';
 import { processErrors } from '../utils/errorProcessing';
 
 class UserController {
     static listAll = async (req: Request, res: Response, next: NextFunction) => {
-        // Get users from database
-        const users = await User.find().select(['_id', 'username', 'role']);
+        // Define the query to execute based on the role
+        let query;
+        if ((req as CustomRequest).token.payload.role === ROLES.USER) {
+            query = User.find({role: ROLES.USER})
+        } else {
+            query = User.find()
+        }
+
+        // Execute the query
+        const users = await query.select(['_id', 'username', 'role']);
 
         // Send the users object
         res.status(200).type('json').send(users);
@@ -17,6 +28,11 @@ class UserController {
     static getOneById = async (req: Request, res: Response, next: NextFunction) => {
         // Get the ID from the url
         const id: string = req.params.id;
+
+        // Validate permissions
+        if ((req as CustomRequest).token.payload.role === ROLES.USER && req.params.id !== (req as CustomRequest).token.payload.userId) {
+            throw new ForbiddenError('Not enough permissions');
+        }
 
         // Mongoose automatically casts the id to ObjectID
         const user = await User.findById(id).select(['_id', 'username', 'role']);
@@ -49,8 +65,18 @@ class UserController {
         // Get the ID from the url
         const id = req.params.id;
 
+        // Validate permissions
+        if ((req as CustomRequest).token.payload.role === ROLES.USER && req.params.id !== (req as CustomRequest).token.payload.userId) {
+            throw new ForbiddenError('Not enough permissions');
+        }
+
         // Get values from the body
         const { username, role } = req.body;
+
+        // Verify you cannot make yourself an admin if you are a user
+        if ((req as CustomRequest).token.payload.role === ROLES.USER && role === ROLES.ADMIN) {
+            throw new ForbiddenError('Not enough permissions');
+        }
 
         // Mongoose automatically casts the id to ObjectID
         const user = await User.findById(id).select(['_id', 'username', 'role']);

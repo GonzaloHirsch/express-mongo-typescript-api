@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import * as jwt from 'jsonwebtoken';
+import { verify, JwtPayload } from 'jsonwebtoken';
 import config from '../config';
+
+export interface CustomRequest extends Request {
+    token: JwtPayload;
+}
 
 export const checkJwt = (req: Request, res: Response, next: NextFunction) => {
     // Get the jwt token from the head
@@ -9,23 +13,19 @@ export const checkJwt = (req: Request, res: Response, next: NextFunction) => {
 
     // Try to validate the token and get data
     try {
-        jwtPayload = <any>jwt.verify(token?.split(" ")[1], config.jwtSecret!);
-        res.locals.jwtPayload = jwtPayload;
+        jwtPayload = <any>verify(token?.split(' ')[1], config.jwt.secret!, {
+            complete: true,
+            audience: config.jwt.audience,
+            issuer: config.jwt.issuer
+        });
+        (req as CustomRequest).token = jwtPayload;
     } catch (error) {
-        console.log(error)
-        // If token is not valid, respond with 401 (unauthorized)
-        res.status(401).send();
+        res.status(401)
+            .type('json')
+            .send(JSON.stringify({ message: 'Missing or invalid token' }));
         return;
     }
 
-    // The token is valid for 1 hour
-    // We want to send a new token on every request
-    const { userId, username } = jwtPayload;
-    const newToken = jwt.sign({ userId, username }, config.jwtSecret!, {
-        expiresIn: '1h'
-    });
-    res.setHeader('token', newToken);
-
-    //Call the next middleware or controller
+    // Call the next middleware or controller
     next();
 };

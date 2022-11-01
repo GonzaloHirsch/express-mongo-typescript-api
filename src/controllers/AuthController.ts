@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
-import * as jwt from 'jsonwebtoken';
+import { NextFunction, Request, Response } from 'express';
+import { sign } from 'jsonwebtoken';
 
-import { User, IUser } from '../models/user';
+import { User } from '../models/user';
 import config from '../config';
 import { ClientError } from '../exceptions/clientError';
 import { UnauthorizedError } from '../exceptions/unauthorizedError';
@@ -10,7 +10,7 @@ import { processErrors } from '../utils/errorProcessing';
 import { Error } from 'mongoose';
 
 class AuthController {
-    static login = async (req: Request, res: Response) => {
+    static login = async (req: Request, res: Response, next: NextFunction) => {
         // Check if username and password are set
         let { username, password } = req.body;
         if (!(username && password)) throw new ClientError('Username and password are required');
@@ -24,13 +24,19 @@ class AuthController {
         }
 
         // Sing JWT, valid for 1 hour
-        const token = jwt.sign({ userId: user._id.toString(), username: user.username }, config.jwtSecret!, { expiresIn: '1h' });
+        const token = sign({ userId: user._id.toString(), username: user.username, role: user.role }, config.jwt.secret!, {
+            expiresIn: '1h',
+            notBefore: '0', // Cannot use before now, can be configured to be deferred
+            algorithm: 'HS256',
+            audience: config.jwt.audience,
+            issuer: config.jwt.issuer
+        });
 
         // Send the jwt in the response
-        res.type('json').send({token: token});
+        res.type('json').send({ token: token });
     };
 
-    static changePassword = async (req: Request, res: Response) => {
+    static changePassword = async (req: Request, res: Response, next: NextFunction) => {
         // Get ID from JWT
         const id = res.locals.jwtPayload.userId;
 
@@ -53,7 +59,7 @@ class AuthController {
             // Just save, validation will happen when saving
             await user.save();
         } catch (e) {
-            console.error(e)
+            console.error(e);
             const error = e as Error.ValidationError;
             throw new ClientError(processErrors(error));
         }
