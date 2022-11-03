@@ -16,7 +16,11 @@ export const checkJwt = (req: Request, res: Response, next: NextFunction) => {
         jwtPayload = <any>verify(token?.split(' ')[1], config.jwt.secret!, {
             complete: true,
             audience: config.jwt.audience,
-            issuer: config.jwt.issuer
+            issuer: config.jwt.issuer,
+            algorithms: ['HS256'],
+            clockTolerance: 0,
+            ignoreExpiration: false,
+            ignoreNotBefore: false
         });
         (req as CustomRequest).token = jwtPayload;
     } catch (error) {
