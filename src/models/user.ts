@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+import { ROLES } from '../utils/constants';
 
 export interface IUser {
     username: string;
@@ -41,16 +42,14 @@ const userSchema = new mongoose.Schema<IUser>(
         password: {
             type: String,
             required: true,
-            // By default not included in the queries
-            select: true,
             minLength: [8, 'Password too short'],
             maxLength: [120, 'Password too long']
         },
         role: {
             type: String,
             required: true,
-            enum: ['USER', 'ADMIN'],
-            default: 'USER'
+            enum: [ROLES.USER, ROLES.ADMIN],
+            default: ROLES.USER
         }
     },
     // Created at and updated at timestamps

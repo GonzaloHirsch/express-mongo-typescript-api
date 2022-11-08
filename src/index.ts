@@ -29,7 +29,7 @@ mongoose
         console.log('Connected to Database - Initial Connection');
         // Listen only if DB connection works
         app.listen(config.port, () => {
-            console.log('server is listening on port 3000');
+            console.log(`server is listening on port ${config.port}`);
         });
     })
     .catch((err) => {

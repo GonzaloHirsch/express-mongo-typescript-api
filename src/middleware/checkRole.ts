@@ -6,7 +6,7 @@ export const checkRole = (roles: Array<string>) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         // Find the user within the database
         const user = await User.findById((req as CustomRequest).token.payload.userId);
-        
+
         if (!user) {
             res.status(404)
                 .type('json')

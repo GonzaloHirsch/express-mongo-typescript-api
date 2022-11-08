@@ -1,7 +1,7 @@
-import { CustomError } from "./customError";
+import { CustomError } from './customError';
 
 export class ForbiddenError extends CustomError {
-    constructor (message: string) {
+    constructor(message: string) {
         super(message, 403);
     }
 }
